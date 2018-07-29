@@ -5,6 +5,7 @@
 #include <atomic>
 #include <thread>
 #include <fstream>
+#include <memory>
 
 #include "crc32.h"
 
@@ -12,8 +13,7 @@ uint32_t calcCrc32ForFile (const fs::path &path, const size_t &maxBufferSize = 1
 {
 	auto size = fs::file_size(path);
 
-	auto buffer = reinterpret_cast<uint8_t*>(
-	                     malloc(maxBufferSize));
+	auto buffer = std::unique_ptr<uint8_t[]>{new uint8_t[maxBufferSize]};
 
 	//path.generic_u8string()
 	auto f = std::ifstream {path.u8string (), std::fstream::binary};
@@ -26,13 +26,12 @@ uint32_t calcCrc32ForFile (const fs::path &path, const size_t &maxBufferSize = 1
 
 		size_t curretSize = size <= maxBufferSize ? size : maxBufferSize;
 
-		f.read (reinterpret_cast<char*>(buffer), curretSize);
-		crc = crc32_bitwise(buffer, curretSize, crc);
+		f.read (reinterpret_cast<char*>(buffer.get()), curretSize);
+		crc = crc32_bitwise(buffer.get(), curretSize, crc);
 
 		size -= curretSize;
 	}
 
-	free(buffer);
 	return crc;
 
 }
@@ -123,7 +122,6 @@ std::vector<std::pair<fs::path,fs::path>>
 		}
 	}
 
-
 	return output;
 }
 
@@ -133,25 +131,24 @@ bool compareFiles (const fs::path& a, const fs::path& b, const size_t maxBufferS
 
 	auto size = fs::file_size(a);
 
-	auto buffer_a = reinterpret_cast<uint8_t*>(
-	                     malloc(maxBufferSize));
+	auto buffer_a = std::unique_ptr<uint8_t[]>{new uint8_t[maxBufferSize]};
 
-	auto buffer_b = reinterpret_cast<uint8_t*>(
-	                     malloc(maxBufferSize));
+	auto buffer_b = std::unique_ptr<uint8_t[]>{new uint8_t[maxBufferSize]};
 
-	//path.generic_u8string()
 	auto f_a = std::ifstream {a.u8string (), std::fstream::binary};
-	auto f_b = std::ifstream {b.u8string (), std::fstream::binary};
+	if (not f_a.is_open())
+		return false;
 
-	//if (f.is_open())
-	//	throw 0;
+	auto f_b = std::ifstream {b.u8string (), std::fstream::binary};
+	if (not f_b.is_open())
+		return false;
 
 	while (size != 0){
 
 		size_t curretSize = size <= maxBufferSize ? size : maxBufferSize;
 
-		f_a.read (reinterpret_cast<char*>(buffer_a), curretSize);
-		f_b.read (reinterpret_cast<char*>(buffer_b), curretSize);
+		f_a.read (reinterpret_cast<char*>(buffer_a.get()), curretSize);
+		f_b.read (reinterpret_cast<char*>(buffer_b.get()), curretSize);
 
 		for (int i = 0; i < curretSize; i++)
 			if (buffer_a[i] != buffer_b[i])
@@ -160,8 +157,6 @@ bool compareFiles (const fs::path& a, const fs::path& b, const size_t maxBufferS
 		size -= curretSize;
 	}
 
-	free(buffer_a); // Todo
-	free(buffer_b);
 	return true;
 
 }
