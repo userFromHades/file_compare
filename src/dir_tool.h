@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <vector>
 #include <utility>
+#include <functional>
 
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem::v1;
@@ -12,8 +13,9 @@ namespace fs = std::experimental::filesystem::v1;
 std::vector<fs::path> findAllFiles (const std::string &dirName);
 
 std::unordered_multimap<uint32_t, fs::path>
-                      calcCrcMt (const std::vector<fs::path>& paths,
-                                  const uint32_t &numOfThread = 1);
+          calcCrcMt (const std::vector<fs::path>& paths,
+                     std::function<void(uint32_t)> &onCount,
+                     const uint32_t &numOfThread = 1);
 
 std::vector<std::pair<fs::path,fs::path>>
     findTheSameCrcPairs (const std::unordered_multimap<uint32_t, fs::path>& a,

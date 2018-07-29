@@ -35,6 +35,8 @@ protected:
 
 	QList<std::pair<std::string, std::string>> pairsOfFiles;
 
+	qreal crcProgress = 0.0f;
+
 signals:
 	void crcProgressChanged ();
 

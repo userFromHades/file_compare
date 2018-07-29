@@ -12,28 +12,40 @@ UI::~UI(){}
 void UI::compare (const QString& t_dirA, const QString& t_dirB){
 
 	//Todo check dirs
-
 	auto dirA = (QUrl(t_dirA)).toLocalFile().toStdString();
 	auto dirB = (QUrl(t_dirB)).toLocalFile().toStdString();
 
-	auto futureA = std::async(findAllFiles, dirA);
-	auto futureB = std::async(findAllFiles, dirB);
+	std::thread ([this, dirA, dirB](){
 
-	auto filesA = futureA.get();
-	auto filesB = futureB.get();
+		auto futureA = std::async(findAllFiles, dirA);
+		auto futureB = std::async(findAllFiles, dirB);
 
-	auto hash_a = calcCrcMt(filesA, 8); //Todo return future
-	auto hash_b = calcCrcMt(filesB, 8); //Todo return future
+		auto filesA = futureA.get();
+		auto filesB = futureB.get();
 
-	auto pairs = findTheSameCrcPairs (hash_a, hash_b); //Todo mt
+		//Todo не продолжать если нет фалов в одном из наборов
 
-	for (auto [first, second] : pairs){
-		if (compareFiles(first,second)){
-			beginInsertRows(QModelIndex(), pairsOfFiles.size(), pairsOfFiles.size());
-			pairsOfFiles.push_back(std::make_pair(first.u8string(), second.u8string()));
-			endInsertRows();
+		const uint32_t totalCrc = filesA.size() + filesB.size();
+
+		std::function onCount = [this, totalCrc](uint32_t count){
+			crcProgress = qreal(count) / qreal(totalCrc);
+			emit crcProgressChanged ();
+		};
+
+		auto hash_a = calcCrcMt(filesA, onCount, 8);
+
+		auto hash_b = calcCrcMt(filesB, onCount, 8);
+
+		auto pairs = findTheSameCrcPairs (hash_a, hash_b); //Todo mt
+
+		for (auto [first, second] : pairs){
+			if (compareFiles(first,second)){
+				beginInsertRows(QModelIndex(), pairsOfFiles.size(), pairsOfFiles.size());
+				pairsOfFiles.push_back(std::make_pair(first.u8string(), second.u8string()));
+				endInsertRows();
+			}
 		}
-	}
+	}).detach();
 }
 
 QVariant UI::data(const QModelIndex & index, int role) const {
@@ -59,7 +71,7 @@ int UI::rowCount(const QModelIndex & parent) const {
 }
 
 qreal UI::getCrcProgres () const {
-	return 0.0f;
+	return crcProgress;
 }
 
 QHash<int, QByteArray> UI::roleNames() const

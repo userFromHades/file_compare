@@ -62,7 +62,10 @@ std::vector<fs::path> findAllFiles (const std::string &dirName){
 	return output;
 }
 
-std::unordered_multimap<uint32_t, fs::path> calcCrcMt (const std::vector<fs::path>& paths, const uint32_t &numOfThread)
+std::unordered_multimap<uint32_t, fs::path>
+        calcCrcMt (const std::vector<fs::path>& paths,
+                   std::function<void(uint32_t)>& onCount,
+                   const uint32_t &numOfThread)
 {
 	int32_t namesPerThread = paths.size() / numOfThread;
 	if (namesPerThread == 0)
@@ -70,7 +73,7 @@ std::unordered_multimap<uint32_t, fs::path> calcCrcMt (const std::vector<fs::pat
 
 	std::mutex mutex;
 	std::unordered_multimap<uint32_t, fs::path> result;
-	std::atomic<uint32_t> count = 0;
+	uint32_t counter = 0;
 	std::vector<std::thread> threadPool;
 
 	for (int i = 0; i < numOfThread and i < paths.size(); i++){
@@ -86,9 +89,11 @@ std::unordered_multimap<uint32_t, fs::path> calcCrcMt (const std::vector<fs::pat
 				{
 					auto lock = std::lock_guard{mutex};
 					result.insert(std::make_pair(crc, *it));
+					counter++;
+					onCount(counter);
 				}
 
-				count++;
+
 			}
 
 		}));
@@ -117,6 +122,7 @@ std::vector<std::pair<fs::path,fs::path>>
 			output.push_back(c);
 		}
 	}
+
 
 	return output;
 }

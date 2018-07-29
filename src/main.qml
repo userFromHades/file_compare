@@ -101,7 +101,6 @@ ApplicationWindow {
             value: ui.crcProgress
         }
 
-
         RowLayout {
             ListView {
 
