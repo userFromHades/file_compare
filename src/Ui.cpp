@@ -6,7 +6,15 @@
 #include "dir_tool.h"
 
 
-UI::UI( QObject *parent): QAbstractListModel(parent){}
+UI::UI( QObject *parent): QAbstractListModel(parent){
+
+	connect (this, &UI::addPaths,
+	         [this](const std::string a, const std::string b){
+		beginInsertRows(QModelIndex(), pairsOfFiles.size(), pairsOfFiles.size());
+		pairsOfFiles.push_back(std::make_pair(a, b));
+		endInsertRows();
+	});
+}
 UI::~UI(){}
 
 void UI::compare (const QString& t_dirA, const QString& t_dirB){
@@ -49,16 +57,13 @@ void UI::compare (const QString& t_dirA, const QString& t_dirB){
 			emit crcProgressChanged ();
 
 			if (equal){
-				// Todo Is Thread safe?
-				beginInsertRows(QModelIndex(), pairsOfFiles.size(), pairsOfFiles.size());
-				pairsOfFiles.push_back(std::make_pair(paths.first.u8string(), paths.second.u8string()));
-				endInsertRows();
+				emit addPaths(paths.second.u8string(),
+				              paths.second.u8string());
+
 			}
 		};
 
 		compareFilesMt(pairs, onCompare, 8);
-
-		//Todo список не обнавляеться без перерисовки?
 
 	}).detach();
 }
@@ -74,10 +79,6 @@ QVariant UI::data(const QModelIndex & index, int role) const {
 	    case dirB: return QString::fromUtf8( p.second.c_str() );
 	}
 	return QVariant();
-}
-
-bool UI::setData(const QModelIndex &index, const QVariant &value, int role){
-	return false;
 }
 
 int UI::rowCount(const QModelIndex & parent) const {

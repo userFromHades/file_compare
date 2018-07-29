@@ -19,7 +19,6 @@ public:
 	Q_INVOKABLE void compare (const QString&, const QString&);
 
 	QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const override;
-	bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 	int rowCount(const QModelIndex & parent = QModelIndex()) const override;
 
 	qreal getCrcProgres () const;
@@ -39,6 +38,7 @@ protected:
 
 signals:
 	void crcProgressChanged ();
+	void addPaths (const std::string, const std::string);
 
 };
 
