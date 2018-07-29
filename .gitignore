@@ -1,0 +1,8 @@
+Makefile*
+*.user
+*.dep
+*.stash
+*.autosave
+build
+firmware
+/bin
