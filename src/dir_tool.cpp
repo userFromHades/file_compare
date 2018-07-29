@@ -160,3 +160,41 @@ bool compareFiles (const fs::path& a, const fs::path& b, const size_t maxBufferS
 	return true;
 
 }
+
+void compareFilesMt(const std::vector<std::pair<fs::path,fs::path>> pairs,
+                    std::function<void(bool, uint32_t count ,std::pair<fs::path,fs::path>)>& onCompare,
+                    const uint32_t &numOfThread)
+{
+	int32_t namesPerThread = pairs.size() / numOfThread;
+	if (namesPerThread == 0)
+		namesPerThread = 1;
+
+	std::mutex mutex;
+	uint32_t counter = 0;
+	std::vector<std::thread> threadPool;
+
+	for (int i = 0; i < numOfThread and i < pairs.size(); i++){
+
+		auto begin = std::begin(pairs) + i       * namesPerThread;
+		auto end   = std::begin(pairs) + (i + 1) * namesPerThread;//Todo
+
+		threadPool.emplace_back(std::thread([&, begin, end](){
+
+			for (auto it = begin; it < end; it++){
+				const auto equal = compareFiles(it->first,it->second);
+
+				{
+					auto lock = std::lock_guard{mutex};
+					counter++;
+					onCompare(equal, counter, *it);
+				}
+
+			}
+
+		}));
+	}
+
+	for (auto &l : threadPool)
+		l.join();
+
+}

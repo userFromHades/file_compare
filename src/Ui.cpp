@@ -25,26 +25,41 @@ void UI::compare (const QString& t_dirA, const QString& t_dirB){
 
 		//Todo не продолжать если нет фалов в одном из наборов
 
-		const uint32_t totalCrc = filesA.size() + filesB.size();
-
-		std::function onCount = [this, totalCrc](uint32_t count){
-			crcProgress = qreal(count) / qreal(totalCrc);
+		std::function onCountA = [this, total = filesA.size()](uint32_t count){
+			crcProgress = 1.0 / 3.0 * qreal(count) / qreal(total);
 			emit crcProgressChanged ();
 		};
 
-		auto hash_a = calcCrcMt(filesA, onCount, 8);
+		auto hash_a = calcCrcMt(filesA, onCountA, 8);
 
-		auto hash_b = calcCrcMt(filesB, onCount, 8);
+
+		std::function onCountB = [this, total = filesA.size()](uint32_t count){
+			crcProgress = 1.0 / 3.0 *(1.0 +  qreal(count) / qreal(total));
+			emit crcProgressChanged ();
+		};
+
+		auto hash_b = calcCrcMt(filesB, onCountB, 8);
+
 
 		auto pairs = findTheSameCrcPairs (hash_a, hash_b); //Todo mt
 
-		for (auto [first, second] : pairs){
-			if (compareFiles(first,second)){
+		std::function onCompare = [this, total = pairs.size()] (bool equal, uint32_t count, std::pair<fs::path,fs::path> paths) -> void {
+
+			crcProgress = 1.0 / 3.0 *(2.0 +  qreal(count) / qreal(total));
+			emit crcProgressChanged ();
+
+			if (equal){
+				// Todo Is Thread safe?
 				beginInsertRows(QModelIndex(), pairsOfFiles.size(), pairsOfFiles.size());
-				pairsOfFiles.push_back(std::make_pair(first.u8string(), second.u8string()));
+				pairsOfFiles.push_back(std::make_pair(paths.first.u8string(), paths.second.u8string()));
 				endInsertRows();
 			}
-		}
+		};
+
+		compareFilesMt(pairs, onCompare, 8);
+
+		//Todo список не обнавляеться без перерисовки?
+
 	}).detach();
 }
 
@@ -64,7 +79,6 @@ QVariant UI::data(const QModelIndex & index, int role) const {
 bool UI::setData(const QModelIndex &index, const QVariant &value, int role){
 	return false;
 }
-
 
 int UI::rowCount(const QModelIndex & parent) const {
 	return pairsOfFiles.size();

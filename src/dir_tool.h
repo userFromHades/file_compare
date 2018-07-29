@@ -23,4 +23,8 @@ std::vector<std::pair<fs::path,fs::path>>
 
 bool compareFiles (const fs::path& a, const fs::path& b, const size_t maxBufferSize = 1024*1024);
 
+void compareFilesMt(const std::vector<std::pair<fs::path,fs::path>> pairs,
+                    std::function<void(bool, uint32_t, std::pair<fs::path,fs::path>)>& onCompare,
+                    const uint32_t &numOfThread = 1);
+
 #endif //DIR_TOOL_H
